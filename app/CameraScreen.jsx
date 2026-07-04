@@ -2,11 +2,13 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { useRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function CameraScreen() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
+  const insets = useSafeAreaInsets();
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -35,7 +37,9 @@ export default function CameraScreen() {
       return;
     }
     try {
-      const result = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      // Lower quality keeps the base64 payload small, which keeps the
+      // JS thread from freezing during JSON.stringify on the Result screen.
+      const result = await cameraRef.current.takePictureAsync({ quality: 0.5 });
       console.log("Captured photo URI:", result.uri);
       router.push({
         pathname: "/PreviewScreen",
@@ -50,7 +54,7 @@ export default function CameraScreen() {
     <View style={styles.container}>
       <CameraView ref={cameraRef} style={styles.camera} facing="back" />
       <TouchableOpacity
-        style={styles.captureButton}
+        style={[styles.captureButton, { bottom: insets.bottom + 24 }]}
         onPress={() => {
           console.log("Button pressed!");
           takePicture();
@@ -68,7 +72,6 @@ const styles = StyleSheet.create({
   camera: { flex: 1 },
   captureButton: {
     position: "absolute",
-    bottom: 40,
     alignSelf: "center",
     backgroundColor: "#ba1212",
     paddingVertical: 14,

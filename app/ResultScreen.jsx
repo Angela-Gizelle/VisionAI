@@ -1,10 +1,17 @@
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { ANALYSIS_PROMPT, analyzeImage } from "../lib/gemini";
+import {
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { analyzeImage, PROMPTS } from "../lib/gemini";
 
 export default function ResultScreen() {
-  const { base64Image } = useLocalSearchParams();
+  const { base64Image, promptKey } = useLocalSearchParams();
+  const router = useRouter();
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +24,13 @@ export default function ResultScreen() {
     setLoading(true);
     setError(null);
     try {
-      const result = await analyzeImage(base64Image, ANALYSIS_PROMPT);
+      // Give React a chance to actually paint the spinner before the
+      // heavy synchronous work (JSON.stringify-ing the base64 image)
+      // blocks the JS thread.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const prompt = PROMPTS[promptKey] || PROMPTS.academic;
+      const result = await analyzeImage(base64Image, prompt);
       console.log("FULL GEMINI RESPONSE:", JSON.stringify(result));
       const textPart = result?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!textPart) throw new Error("Empty response from Gemini");
@@ -45,12 +58,24 @@ export default function ResultScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Text style={styles.backButtonText}>Back</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.personaTag}>Persona: {promptKey}</Text>
+
       <Text style={styles.sectionTitle}>Objects</Text>
       {analysis.objects.map((obj, i) => (
         <Text key={i} style={styles.listItem}>
@@ -74,7 +99,27 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, paddingTop: 60 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { marginTop: 12, color: "#5A6472" },
-  errorText: { color: "#B3261E", textAlign: "center", fontSize: 16 },
+  errorText: {
+    color: "#B3261E",
+    textAlign: "center",
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#5A6472",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  backButtonText: { color: "#fff", fontWeight: "bold" },
+  personaTag: {
+    fontSize: 13,
+    color: "#5B3FA3",
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
