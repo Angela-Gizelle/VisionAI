@@ -1,10 +1,10 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useRouter } from "expo-router"; // ✅ import
+import { useRouter } from "expo-router";
 import { useRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function CameraScreen() {
-  const router = useRouter(); // ✅ hook call — must be inside the component
+  const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
 
